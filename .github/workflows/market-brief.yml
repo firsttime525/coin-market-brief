@@ -1,1 +1,49 @@
+name: 시황 브리핑
 
+on:
+  schedule:
+    # GitHub 예약 실행은 정각에 10~20분씩 밀리는 일이 잦아서 10분 일찍 걸어 둡니다.
+    # (UTC 기준) 20:50 = KST 05:50 / 08:50 = KST 17:50 / 13:50 = KST 22:50
+    - cron: "50 20 * * *"
+    - cron: "50 8 * * *"
+    - cron: "50 13 * * *"
+  workflow_dispatch: {}   # Actions 탭에서 "Run workflow"로 바로 테스트
+
+concurrency:
+  group: market-brief
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      # 직전 브리핑 값(USDT.D, BTC.D 등)을 기억해서 "직전 대비" 변화를 보여주기 위함
+      - name: 직전 상태 불러오기
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: brief-state-${{ github.run_id }}
+          restore-keys: brief-state-
+
+      - name: 브리핑 만들고 보내기
+        env:
+          BRIEF_BOT_TOKEN: ${{ secrets.BRIEF_BOT_TOKEN }}
+          BRIEF_CHAT_ID: ${{ secrets.BRIEF_CHAT_ID }}
+          COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+        run: python market_brief.py
+
+      - name: 상태 저장
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: brief-state-${{ github.run_id }}
