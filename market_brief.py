@@ -152,7 +152,7 @@ def fetch_derivs_coinalyze(api_key):
     out = {}
     for row in fr:
         coin = row["symbol"][:3]
-        out.setdefault(coin, {})["funding"] = row["value"] * 100  # %
+        out.setdefault(coin, {})["funding"] = row["value"]  # Coinalyze는 이미 % 단위
     for row in oi_hist:
         coin = row["symbol"][:3]
         hist = row.get("history") or []
